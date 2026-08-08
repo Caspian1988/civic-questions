@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>American Civics Exam Simulator</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e272c; color: #f5f6fa; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 700px; background-color: #2f3640; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); overflow: hidden; }
+        .header { background-color: #c23616; padding: 20px; text-align: center; font-weight: bold; font-size: 22px; color: white; letter-spacing: 1px; }
+        .credit { background-color: #192a56; padding: 6px; text-align: center; font-size: 12px; font-style: italic; color: #dcdde1; }
+        .hud-panel { display: flex; justify-content: space-between; background-color: #202b38; padding: 12px 20px; font-size: 14px; border-bottom: 2px solid #3f444e; }
+        .card-box { padding: 40px 30px; min-height: 140px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .question-text { font-size: 20px; font-weight: 600; line-height: 1.5; color: #f5f6fa; }
+        .control-panel { padding: 25px; background-color: #202b38; display: flex; flex-direction: column; gap: 15px; }
+        .input-row { display: flex; gap: 12px; }
+        input[type="text"] { flex-grow: 1; padding: 14px; font-size: 16px; border: 2px solid #718093; border-radius: 6px; background-color: #2f3640; color: white; outline: none; }
+        input[type="text"]:focus { border-color: #00a8ff; }
+        button { padding: 14px 28px; font-size: 15px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; transition: all 0.2s ease; }
+        .btn-submit { background-color: #4cd137; color: white; }
+        .btn-submit:hover { background-color: #44bd32; }
+        .btn-skip { background-color: #7f8fa6; color: white; }
+        .btn-skip:hover { background-color: #718093; }
+        .feedback-box { padding: 15px; margin: 0 25px 25px 25px; border-radius: 6px; font-size: 14px; display: none; line-height: 1.4; }
+        .feedback-success { background-color: rgba(76, 209, 55, 0.2); border: 1px solid #4cd137; color: #4cd137; }
+        .feedback-error { background-color: rgba(232, 65, 24, 0.2); border: 1px solid #e84118; color: #e84118; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">USCIS CIVICS KNOWLEDGE ENGINE</div>
+    <div class="credit">SYSTEM DEPLOYED BY OPERATOR BAGHIROV</div>
+    
+    <div class="hud-panel">
+        <span id="hud-progress">Question: 1 / 100</span>
+        <span id="hud-score">Current Score: 0/0 (0%)</span>
+    </div>
+    
+    <div class="card-box">
+        <div class="question-text" id="question-display">Loading core protocol...</div>
+    </div>
+
+    <div class="feedback-box" id="feedback-display"></div>
+    
+    <div class="control-panel">
+        <div class="input-row">
+            <input type="text" id="answer-input" placeholder="Type your response here..." autocomplete="off">
+            <button class="btn-submit" id="btn-submit">SUBMIT</button>
+            <button class="btn-skip" id="btn-skip">SKIP</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 100% Offline Core Database - Tightened compression to prevent clipboard blowout
+    const civicsDatabase = [
+        { id: 1, q: "What is the form of government of the United States?", a: ["republic", "constitution-based federal republic", "representative democracy"] },
+        { id: 2, q: "What is the supreme law of the land?", a: ["constitution", "u.s. constitution"] },
+        { id: 3, q: "Name one thing the U.S. Constitution does.", a: ["forms the government", "defines powers of government", "defines the parts of government", "protects the rights of the people"] },
+        { id: 4, q: "The U.S. Constitution starts with the words “We the People.” What does “We the People” mean?", a: ["self-government", "popular sovereignty", "consent of the governed", "people should govern themselves", "social contract"] },
+        { id: 5, q: "How are changes made to the U.S. Constitution?", a: ["amendments", "the amendment process"] },
+        { id: 6, q: "What does the Bill of Rights protect?", a: ["rights of americans", "rights of people living in the united states"] },
+        { id: 7, q: "How many amendments does the U.S. Constitution have?", a: ["27", "twenty-seven"] },
+        { id: 8, q: "Why is the Declaration of Independence important?", a: ["it says america is free from british control", "it says all people are created equal", "it identifies inherent rights", "it identifies individual freedoms"] },
+        { id: 9, q: "What founding document said the American colonies were free from Britain?", a: ["declaration of independence"] },
+        { id: 10, q: "Name two important ideas from the Declaration of Independence and the U.S. Constitution.", a: ["equality", "liberty", "social contract", "natural rights", "limited government", "self-government"] },
+        { id: 11, q: "The words “Life, Liberty, and the pursuit of Happiness” are in what founding document?", a: ["declaration of independence"] },
+        { id: 12, q: "What is the economic system of the United States?", a: ["capitalism", "free market economy"] },
+        { id: 13, q: "What is the rule of law?", a: ["everyone must follow the law", "leaders must obey the law", "government must obey the law", "no one is above the law"] },
+        { id: 14, q: "Many documents influenced the U.S. Constitution. Name one.", a: ["declaration of independence", "articles of confederation", "federalist papers", "anti-federalist papers", "virginia declaration of rights", "fundamental orders of connecticut", "mayflower compact", "iroquois great law of peace"] },
+        { id: 15, q: "There are three branches of government. Why?", a: ["so one part does not become too powerful", "checks and balances", "separation of powers"] },
+        { id: 16, q: "Name the three branches of government.", a: ["legislative, executive, and judicial", "congress, president, and the courts"] },
+        { id: 17, q: "The President of the United States is in charge of which branch of government?", a: ["executive branch"] },
+        { id: 18, q: "What part of the federal government writes laws?", a: ["congress", "u.s. congress", "national legislature", "legislative branch"] },
+        { id: 19, q: "What are the two parts of the U.S. Congress?", a: ["senate and house", "senate and house of representatives"] },
+        { id: 20, q: "Name one power of the U.S. Congress.", a: ["writes laws", "declares war", "makes the federal budget"] },
+        { id: 21, q: "How many U.S. senators are there?", a: ["100", "one hundred"] },
+        { id: 22, q: "How long is a term for a U.S. senator?", a: ["6 years", "six years", "6"] },
+        { id: 23, q: "Who is one of your state’s U.S. senators now?", a: ["ben cardin", "benjamin cardin", "chris van hollen", "christopher van hollen"] },
+        { id: 24, q: "How many voting members are in the House of Representatives?", a: ["435", "four hundred thirty-five"] },
+        { id: 25, q: "How long is a term for a member of the House of Representatives?", a: ["2 years", "two years", "2"] },
+        { id: 26, q: "Why do U.S. representatives serve shorter terms than U.S. senators?", a: ["to more closely follow public opinion"] },
+        { id: 27, q: "How many senators does each state have?", a: ["2", "two"] },
+        { id: 28, q: "Why does each state have two senators?", a: ["equal representation", "great compromise", "connecticut compromise"] },
+        { id: 29, q: "Name your U.S. representative.", a: ["jamie raskin", "jameel raskin"] },
+        { id: 30, q: "What is the name of the Speaker of the House of Representatives now?", a: ["mike johnson", "james michael johnson"] },
+        { id: 31, q: "Who does a U.S. senator represent?", a: ["citizens of their state", "people of their state"] },
+        { id: 32, q: "Who elects U.S. senators?", a: ["citizens from their state"] },
+        { id: 33, q: "Who does a member of the House of Representatives represent?", a: ["citizens in their district", "people in their district"] },
+        { id: 34, q: "Who elects members of the House of Representatives?", a: ["citizens from their district"] },
+        { id: 35, q: "Some states have more representatives than other states. Why?", a: ["state's population", "they have more people", "some states have more people"] },
+        { id: 36, q: "The President of the United States is elected for how many years?", a: ["4 years", "four years", "4"] },
+        { id: 37, q: "The President of the United States can serve only two terms. Why?", a: ["22nd amendment", "to keep the president from becoming too powerful"] },
+        { id: 38, q: "What is the name of the President of the United States now?", a: ["donald trump", "donald j. trump", "trump"] },
+        { id: 39, q: "What is the name of the Vice President of the United States now?", a: ["jd vance", "j.d. vance", "vance", "james david vance"] },
+        { id: 40, q: "If the president can no longer serve, who becomes president?", a: ["vice president", "the vice president"] },
+        { id: 41, q: "Name one power of the president.", a: ["signs bills into law", "vetoes bills", "enforces laws", "commander in chief", "chief diplomat", "appoints federal judges"] },
+        { id: 42, q: "Who is Commander in Chief of the U.S. military?", a: ["the president", "president"] },
+        { id: 43, q: "Who signs bills to become laws?", a: ["the president", "president"] },
+        { id: 44, q: "Who vetoes bills?", a: ["the president", "president"] },
+        { id: 45, q: "Who appoints federal judges?", a: ["the president", "president"] },
+        { id: 46, q: "The executive branch has many parts. Name one.", a: ["president", "cabinet", "federal departments and agencies"] },
+        { id: 47, q: "What does the President’s Cabinet do?", a: ["advises the president"] },
+        { id: 48, q: "What are two Cabinet-level positions?", a: ["attorney general", "vice president", "secretary of state", "secretary of transportation", "secretary of the treasury", "secretary of defense", "secretary of agriculture"] },
+        { id: 49, q: "Why is the Electoral College important?", a: ["it decides who is elected president", "provides a compromise"] },
+        { id: 50, q: "What is one part of the judicial branch?", a: ["supreme court", "federal courts"] },
+        { id: 51, q: "What does the judicial branch do?", a: ["reviews laws", "explains laws", "resolves disputes", "decides if a law goes against the constitution"] },
+        { id: 52, q: "What is the highest court in the United States?", a: ["supreme court"] },
+        { id: 53, q: "How many seats are on the Supreme Court?", a: ["9", "nine"] },
+        { id: 54, q: "How many Supreme Court justices are usually needed to decide a case?", a: ["5", "five"] },
+        { id: 55, q: "How long do Supreme Court justices serve?", a: ["life", "lifetime appointment", "until retirement"] },
+        { id: 56, q: "Supreme Court justices serve for life. Why?", a: ["to be independent", "to limit outside political influence"] },
+        { id: 57, q: "Who is the Chief Justice of the United States now?", a: ["john roberts", "john g. roberts"] },
+        { id: 58, q: "Name one power that is only for the federal government.", a: ["print paper money", "mint coins", "declare war", "create an army", "make treaties", "set foreign policy"] },
+        { id: 59, q: "Name one power that is only for the states.", a: ["provide schooling and education", "provide protection", "police", "provide safety", "fire departments", "give a driver's license", "approve zoning"] },
+        { id: 60, q: "What is the purpose of the 10th Amendment?", a: ["powers not given to the federal government belong to the states or to the people"] },
+        { id: 61, q: "Who is the governor of your state now?", a: ["wes moore", "westley moore"] },
+        { id: 62, q: "What is the capital of your state?", a: ["annapolis"] },
+        { id: 63, q: "There are four amendments to the U.S. Constitution about who can vote. Describe one of them.", a: ["citizens eighteen and older can vote", "you don't have to pay a poll tax", "any citizen can vote", "a male citizen of any race"] },
+        { id: 64, q: "Who can vote in federal elections, run for federal office, and serve on a jury in the United States?", a: ["citizens", "u.s. citizens", "citizens of the united states"] },
+        { id: 65, q: "What are three rights of everyone living in the United States?", a: ["freedom of expression", "freedom of speech", "freedom of assembly", "freedom to petition the government", "freedom of religion", "the right to bear arms"] },
+        { id: 66, q: "What do we show loyalty to when we say the Pledge of Allegiance?", a: ["the united states", "the flag"] },
+        { id: 67, q: "Name two promises that citizens make when they become U.S. citizens.", a: ["give up loyalty to other countries", "defend the constitution", "obey the laws", "serve in the military if needed", "be loyal to the united states"] },
+        { id: 68, q: "How can people become citizens of the United States?", a: ["naturalization", "derive citizenship", "be born in the united states"] },
+        { id: 69, q: "What are two examples of civic participation in the United States?", a: ["vote", "run for office", "join a political party", "help with a campaign", "join a civic group", "write to an elected official"] },
+        { id: 70, q: "What is one way citizens can stay informed about civic laws and issues?", a: ["read the news", "watch public debates", "attend civic meetings"] },
+        { id: 71, q: "Why is it important to pay federal taxes?", a: ["required by law", "funds the federal government", "pays for public services"] },
+        { id: 72, q: "It is important for all men age 18 through 25 to register for the Selective Service. Name one reason why.", a: ["required by law", "civic duty", "makes sure there are enough people to defend the nation if needed"] },
+        { id: 73, q: "Colonists came to America for many reasons. Name one.", a: ["freedom", "political liberty", "religious freedom", "economic opportunity", "escape persecution"] },
+        { id: 74, q: "Who lived in America before the Europeans arrived?", a: ["american indians", "native americans"] },
+        { id: 75, q: "What group of people was taken to America and sold as slaves?", a: ["africans", "people from africa"] },
+        { id: 76, q: "Why did the colonists fight the British?", a: ["because of high taxes", "taxation without representation", "british army stayed in their houses", "they wanted self-government"] },
+        { id: 77, q: "Who wrote the Declaration of Independence?", a: ["thomas jefferson"] },
+        { id: 78, q: "When was the Declaration of Independence adopted?", a: ["july 4, 1776", "july fourth"] },
+        { id: 79, q: "The American Revolution had many important events. Name one.", a: ["lexington and concord", "battle of saratoga", "battle of yorktown", "washington crossing the delaware"] },
+        { id: 80, q: "There were 13 original states. Name three.", a: ["new york", "new jersey", "virginia", "maryland", "pennsylvania", "delaware", "north carolina", "south carolina", "georgia"] },
+        { id: 81, q: "What founding document was written in 1787?", a: ["u.s. constitution", "the constitution"] },
+        { id: 82, q: "The Federalist Papers supported the passage of the U.S. Constitution. Name one of the writers.", a: ["james madison", "alexander hamilton", "john jay", "publius"] },
+        { id: 83, q: "Why were the Federalist Papers important?", a: ["they explained the constitution", "they supported passing the constitution"] },
+        { id: 84, q: "Benjamin Franklin is famous for many things. Name one.", a: ["first postmaster general", "u.s. diplomat", "writer of poor richard's almanack", "started first free libraries"] },
+        { id: 85, q: "George Washington is famous for many things. Name one.", a: ["first president", "father of our country", "general of the continental army", "president of the constitutional convention"] },
+        { id: 86, q: "Thomas Jefferson is famous for many things. Name one.", a: ["writer of the declaration of independence", "third president", "louisiana purchase", "founded university of virginia"] },
+        { id: 87, q: "James Madison is famous for many things. Name one.", a: ["father of the constitution", "fourth president", "leader of the war of 1812", "one of the writers of the federalist papers"] },
+        { id: 88, q: "What territory did the United States buy from France in 1803?", a: ["louisiana", "louisiana territory"] },
+        { id: 89, q: "Name one war fought by the United States in the 1800s.", a: ["war of 1812", "mexican-american war", "civil war", "spanish-american war"] },
+        { id: 90, q: "Name the U.S. war between the North and the South.", a: ["the civil war"] },
+        { id: 91, q: "The Civil War had many important events. Name one.", a: ["battle of gettysburg", "emancipation proclamation", "surrender at appomattox", "battle of antietam"] },
+        { id: 92, q: "Abraham Lincoln is famous for many things. Name one.", a: ["saved the union", "freed the slaves", "president during the civil war", "gettysburg address"] },
+        { id: 93, q: "What did the Emancipation Proclamation do?", a: ["freed the slaves", "freed slaves in the confederacy"] },
+        { id: 94, q: "What U.S. war ended slavery?", a: ["the civil war"] },
+        { id: 95, q: "What amendment gives citizenship to all persons born in the United States?", a: ["14th amendment", "fourteenth amendment"] },
+        { id: 96, q: "When did all men get the right to vote?", a: ["after the civil war", "15th amendment", "1870"] },
+        { id: 97, q: "Susan B. Anthony is famous for many things. Name one.", a: ["fought for women's rights", "fought for civil rights", "women's suffrage"] },
+        { id: 98, q: "Name one war fought by the United States in the 1900s.", a: ["world war i", "world war ii", "korean war", "vietnam war", "gulf war"] },
+        { id: 99, q: "Why did the United States enter World War I?", a: ["germany attacked u.s. ships", "to support allied powers", "zimmermann telegram"] },
+        { id: 100, q: "When did all women get the right to vote?", a: ["1920", "19th amendment", "after world war i"] }
+    ];
+
+    let activeIndex = 0;
+    let successfulAudits = 0;
+    let completedAttempts = 0;
+
+    const qDisplay = document.getElementById('question-display');
+    const ansInput = document.getElementById('answer-input');
+    const submitBtn = document.getElementById('btn-submit');
+    const skipBtn = document.getElementById('btn-skip');
+    const hudProgress = document.getElementById('hud-progress');
+    const hudScore = document.getElementById('hud-score');
+    const feedbackDisplay = document.getElementById('feedback-display');
+
+    function mountQuestion() {
+        feedbackDisplay.style.display = "none";
+        if (activeIndex >= civicsDatabase.length) {
+            triggerFinalEvaluation();
+            return;
+        }
+        
+        const currentData = civicsDatabase[activeIndex];
+        qDisplay.innerText = `${currentData.id}. ${currentData.q}`;
+        hudProgress.innerText = `Question: ${activeIndex + 1} / ${civicsDatabase.length}`;
+        ansInput.value = "";
+        ansInput.focus();
+    }
+
+    function verifyResponse() {
+        const rawGuess = ansInput.value.trim().toLowerCase();
+        if (rawGuess === "") return;
+
+        const currentData = civicsDatabase[activeIndex];
+        completedAttempts++;
+        
+        let isCorrect = false;
+        for (let i = 0; i < currentData.a.length; i++) {
+            const normalizedAnswer = currentData.a[i].toLowerCase();
+            if (rawGuess.includes(normalizedAnswer) || normalizedAnswer.includes(rawGuess)) {
+                if (rawGuess.length >= 3 || !isNaN(rawGuess)) { 
+                    isCorrect = true;
+                    break;
+                }
+            }
+        }
+
+        if (isCorrect) {
+            successfulAudits++;
+            showFeedback(true, `✅ SECURE: Excellent execution! Acceptable values: "${currentData.a.join('", "')}"`);
+        } else {
+            showFeedback(false, `❌ INFRACTION: Mismatch detected.<br>Valid System Answers: <strong>${currentData.a.join(' | ').toUpperCase()}</strong>`);
+        }
+
+        updateMetrics();
+        activeIndex++;
+        setTimeout(mountQuestion, 3000);
+    }
+
+    function showFeedback(isSuccess, text) {
+        feedbackDisplay.innerHTML = text;
+        feedbackDisplay.className = `feedback-box ${isSuccess ? 'feedback-success' : 'feedback-error'}`;
+        feedbackDisplay.style.display = "block";
+    }
+
+    function updateMetrics() {
+        const percentage = completedAttempts > 0 ? ((successfulAudits / completedAttempts) * 100).toFixed(1) : 0;
+        hudScore.innerText = `Current Score: ${successfulAudits}/${completedAttempts} (${percentage}%)`;
+    }
+
+    function skipItem() {
+        activeIndex++;
+        mountQuestion();
+    }
+
+    function triggerFinalEvaluation() {
+        const finalPct = ((successfulAudits / completedAttempts) * 100).toFixed(1);
+        alert(`CIVICS DEPLOYMENT COMPLETE\n\nFinal Audited Accuracy: ${successfulAudits}/${completedAttempts} (${finalPct}%)\n\nKeep pushing the precision threshold, Comrade!`);
+        activeIndex = 0;
+        successfulAudits = 0;
+        completedAttempts = 0;
+        updateMetrics();
+        mountQuestion();
+    }
+
+    submitBtn.addEventListener('click', verifyResponse);
+    ansInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') verifyResponse(); });
+    skipBtn.addEventListener('click', skipItem);
+
+    // Run instantly offline without waiting for web requests
+    window.onload = mountQuestion;
+</script>
+
+</body>
+</html>
